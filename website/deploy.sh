@@ -23,15 +23,15 @@ echo "npm and node versions we're going to use..."
 npm --version
 node --version
 
-# the algolia plugin will create/update/delete indices
-export GATSBY_ALGOLIA_APP_ID=$STAGING_GATSBY_ALGOLIA_APP_ID
-export GATSBY_ALGOLIA_SEARCH_KEY=$STAGING_GATSBY_ALGOLIA_SEARCH_KEY
-export GATSBY_ALGOLIA_WRITE_KEY=$STAGING_GATSBY_ALGOLIA_WRITE_KEY
-if [[ $GITHUB_REF == refs/tags/web* ]]; then
-    export GATSBY_ALGOLIA_APP_ID=$PROD_GATSBY_ALGOLIA_APP_ID
-    export GATSBY_ALGOLIA_SEARCH_KEY=$PROD_GATSBY_ALGOLIA_SEARCH_KEY
-    export GATSBY_ALGOLIA_WRITE_KEY=$PROD_GATSBY_ALGOLIA_WRITE_KEY
-fi
+## the algolia plugin will create/update/delete indices
+#export GATSBY_ALGOLIA_APP_ID=$STAGING_GATSBY_ALGOLIA_APP_ID
+#export GATSBY_ALGOLIA_SEARCH_KEY=$STAGING_GATSBY_ALGOLIA_SEARCH_KEY
+#export GATSBY_ALGOLIA_WRITE_KEY=$STAGING_GATSBY_ALGOLIA_WRITE_KEY
+#if [[ $GITHUB_REF == refs/tags/web* ]]; then
+#    export GATSBY_ALGOLIA_APP_ID=$PROD_GATSBY_ALGOLIA_APP_ID
+#    export GATSBY_ALGOLIA_SEARCH_KEY=$PROD_GATSBY_ALGOLIA_SEARCH_KEY
+#    export GATSBY_ALGOLIA_WRITE_KEY=$PROD_GATSBY_ALGOLIA_WRITE_KEY
+#fi
 
 # build static docs
 npm ci
@@ -39,13 +39,13 @@ npx gatsby build
 
 
 ### Push Docs to AWS S3 ###
-BUCKET=io.appscope.staging
-DISTRIBUTION_ID=E2O0IS8RABQ4AT
-if [[ $GITHUB_REF == refs/tags/web* ]]; then
-    BUCKET=io.appscope
-    DISTRIBUTION_ID=E3CI6UPKUT68NJ
-fi
-
-aws s3 rm s3://${BUCKET} --recursive
-aws s3 cp ${DIR}/public s3://${BUCKET} --recursive
-aws cloudfront create-invalidation --distribution-id=${DISTRIBUTION_ID} --paths '/*'
+#BUCKET=io.appscope.staging
+#DISTRIBUTION_ID=E2O0IS8RABQ4AT
+#if [[ $GITHUB_REF == refs/tags/web* ]]; then
+#    BUCKET=io.appscope
+#    DISTRIBUTION_ID=E3CI6UPKUT68NJ
+#fi
+#
+#aws s3 rm s3://${BUCKET} --recursive
+#aws s3 cp ${DIR}/public s3://${BUCKET} --recursive
+#aws cloudfront create-invalidation --distribution-id=${DISTRIBUTION_ID} --paths '/*'

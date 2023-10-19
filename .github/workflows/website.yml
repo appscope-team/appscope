@@ -10,16 +10,16 @@
 #
 name: Deploy Website
 on:
-  push:
-    branches:
-      - 'master'
-    tags:
-      - 'web*'
-    paths:
-      - 'website/**'
-      - 'docker/docs/layout.js'
-      - 'docker/docs/schema2md.js'
-      - 'docs/schemas/**'
+  tags:
+    - 'web*'
+#  push:
+#    branches:
+#      - 'master'
+#    paths:
+#      - 'website/**'
+#      - 'docker/docs/layout.js'
+#      - 'docker/docs/schema2md.js'
+#      - 'docs/schemas/**'
 jobs:
   website:
     runs-on: ubuntu-latest
@@ -33,19 +33,19 @@ jobs:
       - name: "Build schema-reference.md"
         run: make docs-generate
 
-      - name: configure AWS creds
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.APPSCOPEDEPLOYROLE }}
-          role-session-name: appscope-deploy
-          aws-region: us-west-2
+#      - name: "Configure AWS creds"
+#        uses: aws-actions/configure-aws-credentials@v2
+#        with:
+#          role-to-assume: ${{ secrets.APPSCOPEDEPLOYROLE }}
+#          role-session-name: appscope-deploy
+#          aws-region: us-west-2
 
       - name: "Website Deploy"
-        env:
-          STAGING_GATSBY_ALGOLIA_APP_ID: ${{ secrets.STAGING_GATSBY_ALGOLIA_APP_ID }}
-          STAGING_GATSBY_ALGOLIA_SEARCH_KEY: ${{ secrets.STAGING_GATSBY_ALGOLIA_SEARCH_KEY }}
-          STAGING_GATSBY_ALGOLIA_WRITE_KEY: ${{ secrets.STAGING_GATSBY_ALGOLIA_WRITE_KEY }}
-          PROD_GATSBY_ALGOLIA_APP_ID: ${{ secrets.PROD_GATSBY_ALGOLIA_APP_ID }}
-          PROD_GATSBY_ALGOLIA_SEARCH_KEY: ${{ secrets.PROD_GATSBY_ALGOLIA_SEARCH_KEY }}
-          PROD_GATSBY_ALGOLIA_WRITE_KEY: ${{ secrets.PROD_GATSBY_ALGOLIA_WRITE_KEY }}
+#        env:
+#          STAGING_GATSBY_ALGOLIA_APP_ID: ${{ secrets.STAGING_GATSBY_ALGOLIA_APP_ID }}
+#          STAGING_GATSBY_ALGOLIA_SEARCH_KEY: ${{ secrets.STAGING_GATSBY_ALGOLIA_SEARCH_KEY }}
+#          STAGING_GATSBY_ALGOLIA_WRITE_KEY: ${{ secrets.STAGING_GATSBY_ALGOLIA_WRITE_KEY }}
+#          PROD_GATSBY_ALGOLIA_APP_ID: ${{ secrets.PROD_GATSBY_ALGOLIA_APP_ID }}
+#          PROD_GATSBY_ALGOLIA_SEARCH_KEY: ${{ secrets.PROD_GATSBY_ALGOLIA_SEARCH_KEY }}
+#          PROD_GATSBY_ALGOLIA_WRITE_KEY: ${{ secrets.PROD_GATSBY_ALGOLIA_WRITE_KEY }}
         run: ./website/deploy.sh
