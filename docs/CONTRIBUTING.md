@@ -2,6 +2,25 @@
 
 Contribution to the project is very welcome and always needed. Please see the below guidelines for contributing to the project. If you have more questions, please feel free to join us on [slack](https://cribl.io/community/#form).
 
+## :exclamation: Licensing
+
+The Apache license (4a) requires that the original top level LICENSE file is preserved, but names can be added to the copyright owners list in that file. Copyright is automatic, but idenfifying key contributors is useful.
+
+> Summary: In the LICENCE file, add names if you wish to; Never remove anything.
+
+In addition, the license requires (4b) that all files changed carry a notice stating that You made a change.  The general method used to state that a file was changed is to add a new copyright line under the original one. 
+
+> Summary: If you are changing a source code file you Must add or update this notice:
+
+```
+/*
+ * (c) 2021 Cribl, Inc
+ * (c) <Years of contribution to This file> Your Name
+ */
+```
+
+The license also requires that all existing copyright notices are preserved.
+
 ## Github
 
 ### Issues

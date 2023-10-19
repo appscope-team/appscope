@@ -281,7 +281,7 @@ jobs:
           BUILDER: ${{ steps.buildx.outputs.name }}
           CACHE_FROM: type=local,src=/tmp/.buildx-cache
           CACHE_TO: type=local,dest=/tmp/.buildx-cache-new
-        run: make builder
+        run: df -h && make builder
 
       # Run `make all` in the builder container to build the core and CLI.
       - name: Build AppScope

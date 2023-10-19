@@ -1,6 +1,6 @@
-[![Build & Test](https://github.com/criblio/appscope/actions/workflows/build.yml/badge.svg)](https://github.com/criblio/appscope/actions/workflows/build.yml)
+[![Build & Test](https://github.com/appscope-team/appscope/actions/workflows/build.yml/badge.svg)](https://github.com/appscope-team/appscope/actions/workflows/build.yml)
 
-![AppScope](docs/images/logo.png)
+# AppScope
 
 AppScope is an open source, runtime-agnostic instrumentation utility for any Linux command or application. It helps users explore, understand, and gain visibility with **no code modification**.
 
@@ -31,6 +31,14 @@ graph LR
     style H fill:#fafafa,stroke:#a6a6a6
 ```
 
+## 🛟 Support
+
+AppScope runs on most Linux distributions and is able to instrument most applications. However, AppScope **cannot**:
+- Instrument Go executables built with Go 1.10 or earlier.
+- Instrument static stripped Go executables built with Go 1.12 or earlier.
+- Instrument Java executables that use Open JVM 6 or earlier, or Oracle JVM 6 or earlier.
+- Obtain a core dump either (a) for a Go executable, or (b) in a musl libc environment.
+
 ## 🚀 Try It Out
 
 Before you begin, ensure that your environment meets the AppScope [requirements](https://appscope.dev/docs/requirements).
@@ -51,15 +59,15 @@ scope detach --all
 **With Docker**
 ```
 docker run --rm -it -v/:/hostfs:ro --privileged cribl/scope
-scope <some app>
+scope <some app> # Scope an app in the container
 scope metrics
 scope events
-scope attach --rootdir /hostfs <process running on host>
+scope attach --rootdir /hostfs <process running on host> # Scope an app in the host
 scope events -f
 scope detach --all --rootdir /hostfs
 ```
 
-## ℹ️ Resources
+## ℹ️  Resources
 
 On the [AppScope Website](https://appscope.dev/) you can:
 
@@ -72,10 +80,6 @@ On the [AppScope Website](https://appscope.dev/) you can:
 
 _The content on that site is built from the [website/](website/) directory in this project._
 
-Elsewhere, you can:
-
-- Complete the [AppScope Fundamentals sandbox](https://sandbox.cribl.io/course/appscope), a tutorial that takes about 30 minutes.
-- Join the [Cribl Community](https://cribl.io/community/) on Slack. The `#appscope` channel is where you'll find developers who contribute to this project.
 
 ## 🔧 Build From Source
 
@@ -88,7 +92,7 @@ AppScope is not built or distributed like most traditional Linux software.
 Pull a copy of the code with:
 
 ```text
-git clone https://github.com/criblio/appscope.git
+git clone https://github.com/appscope-team/appscope.git
 cd appscope
 ```
 
@@ -114,14 +118,13 @@ Either way, the resulting binaries will be in `lib/linux/$(uname -m)/libscope.so
 
 We support building `x86_64` (amd64) or `aarch64` (arm64/v8) binaries by adding `ARCH=x86_64` or `ARCH=aarch64` to the `make build` command. See the [BUILD](docs/BUILD.md) doc for details.
 
-## ✏️ Contributing
+## ✏️  Contributing
 
 If you're interested in contributing to the project, you can:
 
-- Take a look at current [discussions](https://github.com/criblio/appscope/discussions) and [issues](https://github.com/criblio/appscope/issues) in GitHub.
+- View and add to GitHub [discussions](https://github.com/appscope-team/appscope/discussions) discussions about future work.
+- View and add GitHub [issues](https://github.com/appscope-team/appscope/issues) that need to be resolved.
 - See our developer guides in the [docs/](./docs/) directory in this repository.
-- Submit any feature requests and defect reports at <https://github.com/criblio/appscope>.
-- Join the [Cribl Community](https://cribl.io/community/) on Slack. The `#appscope` channel is where you'll find developers who contribute to this project.
 
 ## 📄 License
 
