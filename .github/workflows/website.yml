@@ -10,9 +10,9 @@
 #
 name: Deploy Website
 on:
-  tags:
-    - 'web*'
-#  push:
+  push:
+    tags:
+      - 'web*'
 #    branches:
 #      - 'master'
 #    paths:
