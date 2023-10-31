@@ -3,10 +3,8 @@ import Helmet from "react-helmet";
 import { useStaticQuery, graphql, Link } from "gatsby";
 import "../scss/_docsNav.scss";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Search from "./search";
 import "../utils/font-awesome";
 
-const searchIndices = [{ name: `Pages`, title: `Pages` }];
 const DARK_MODE_KEY = 'DARK_MODE';
 // Check if window is defined (so if in the browser or in node.js).
 const isBrowser = typeof window !== 'undefined';
@@ -45,7 +43,6 @@ export default function DocsNav() {
       />
       <div className={mobileNav ? "docsNav mobileNavOpen" : "docsNav"}>
         <h2 className="mobileMenuHeader">Menu</h2>
-        <Search indices={searchIndices} onChange={() => openMobileNav(true)} />
 
         <FontAwesomeIcon
           className="mobileDocsNav"

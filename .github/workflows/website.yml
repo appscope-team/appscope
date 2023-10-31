@@ -1,25 +1,14 @@
 # 
 # AppScope Website CI Workflow
 #
-# This is the GitHub workflow for AppScope's production website at
-# https://appscope.dev/ and the staging site at
-# https://staging.appscope.dev/.
-#
-# We publish `web*` tags to the production site. Other pushes to the
-# master branch get published to the staging site.
+# Create a git tag with the prefix 'web' and then 'git push --tags'
+# to kick off the workflow on github.
 #
 name: Deploy Website
 on:
   push:
     tags:
       - 'web*'
-#    branches:
-#      - 'master'
-#    paths:
-#      - 'website/**'
-#      - 'docker/docs/layout.js'
-#      - 'docker/docs/schema2md.js'
-#      - 'docs/schemas/**'
 jobs:
   website:
     runs-on: ubuntu-latest
@@ -33,19 +22,5 @@ jobs:
       - name: "Build schema-reference.md"
         run: make docs-generate
 
-#      - name: "Configure AWS creds"
-#        uses: aws-actions/configure-aws-credentials@v2
-#        with:
-#          role-to-assume: ${{ secrets.APPSCOPEDEPLOYROLE }}
-#          role-session-name: appscope-deploy
-#          aws-region: us-west-2
-
       - name: "Website Deploy"
-#        env:
-#          STAGING_GATSBY_ALGOLIA_APP_ID: ${{ secrets.STAGING_GATSBY_ALGOLIA_APP_ID }}
-#          STAGING_GATSBY_ALGOLIA_SEARCH_KEY: ${{ secrets.STAGING_GATSBY_ALGOLIA_SEARCH_KEY }}
-#          STAGING_GATSBY_ALGOLIA_WRITE_KEY: ${{ secrets.STAGING_GATSBY_ALGOLIA_WRITE_KEY }}
-#          PROD_GATSBY_ALGOLIA_APP_ID: ${{ secrets.PROD_GATSBY_ALGOLIA_APP_ID }}
-#          PROD_GATSBY_ALGOLIA_SEARCH_KEY: ${{ secrets.PROD_GATSBY_ALGOLIA_SEARCH_KEY }}
-#          PROD_GATSBY_ALGOLIA_WRITE_KEY: ${{ secrets.PROD_GATSBY_ALGOLIA_WRITE_KEY }}
         run: ./website/deploy.sh

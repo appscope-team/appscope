@@ -30,15 +30,6 @@ module.exports = {
         routeChangeEventName: "gatsby-route-change",
       },
     },
-
-    {
-      resolve: "gatsby-plugin-algolia",
-      options: {
-        appId: process.env.GATSBY_ALGOLIA_APP_ID,
-        apiKey: process.env.GATSBY_ALGOLIA_WRITE_KEY,
-        queries: require("./src/utils/algolia-queries"),
-      },
-    },
     {
       resolve: "gatsby-plugin-manifest",
       options: {
