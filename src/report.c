@@ -3284,6 +3284,57 @@ doNetMetric(metric_t type, net_info *net, control_type_t source, ssize_t size)
     }
 }
 
+void
+doSecurityMetric(security_info_t *sec)
+{
+    if (scope_strlen(sec->path) > 0) {
+        // file
+        event_field_t fields[] = {
+            STRFIELD("file", sec->path, 4, TRUE),
+            STRFIELD("reason", sec->reason, 128, TRUE), // TODO is 128 enough here and below?
+            NUMFIELD("write_bytes", sec->write_bytes, 4, TRUE),
+            PROC_FIELD(g_proc.procname),
+            PID_FIELD(g_proc.pid),
+            HOST_FIELD(g_proc.hostname),
+            UNIT_FIELD("process"),
+            FIELDEND
+        };
+        event_t event = INT_EVENT("sec.file", 1, CURRENT, fields);
+        event.src = CFG_SRC_SEC;
+        sendEvent(g_mtc, &event);
+    } else if (scope_strlen(sec->dnsName) > 0) {
+        // dns
+        event_field_t fields[] = {
+            STRFIELD("dns_name", sec->dnsName, 4, TRUE),
+            STRFIELD("reason", sec->reason, 128, TRUE),
+            PROC_FIELD(g_proc.procname),
+            PID_FIELD(g_proc.pid),
+            HOST_FIELD(g_proc.hostname),
+            UNIT_FIELD("process"),
+            FIELDEND
+        };
+        event_t event = INT_EVENT("sec.dns", 1, CURRENT, fields);
+        event.src = CFG_SRC_SEC;
+        sendEvent(g_mtc, &event);
+    } else if (scope_strlen(sec->dlpi_name) > 0) {
+        // got hook
+        event_field_t fields[] = {
+            STRFIELD("function", sec->func, 4, TRUE),
+            STRFIELD("reason", sec->reason, 128, TRUE),
+            STRFIELD("redirected_from", sec->dlpi_name, 4, TRUE),
+            STRFIELD("redirected_to", sec->path, 4, TRUE),
+            PROC_FIELD(g_proc.procname),
+            PID_FIELD(g_proc.pid),
+            HOST_FIELD(g_proc.hostname),
+            UNIT_FIELD("process"),
+            FIELDEND
+        };
+        event_t event = INT_EVENT("sec.got", 1, CURRENT, fields);
+        event.src = CFG_SRC_SEC;
+        sendEvent(g_mtc, &event);
+    }
+}
+
 static data_type_t
 typeFromStr(const unsigned char *string)
 {
@@ -3451,6 +3502,7 @@ doEvent()
             fs_info *fs;
             stat_err_info *staterr;
             protocol_info *proto;
+            security_info_t *sec;
 
             if (event->evtype == EVT_NET) {
                 net = (net_info *)data;
@@ -3470,6 +3522,9 @@ doEvent()
             } else if (event->evtype == EVT_PROTO) {
                 proto = (protocol_info *)data;
                 doProtocolMetric(proto);
+            } else if (event->evtype == EVT_SEC) {
+                sec = (security_info_t *)data;
+                doSecurityMetric(sec);
             } else {
                 DBG(NULL);
             }

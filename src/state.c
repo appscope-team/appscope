@@ -1280,8 +1280,7 @@ detectProtocol(int sockfd, net_info *net, void *buf, size_t len, metric_t src, s
 static void
 doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
 {
-    if ((g_notify_def.enable == FALSE) || (g_notify_def.files == FALSE) ||
-        !fs || !path) return;
+    if (!fs || !path) return;
 
     int i;
 
@@ -1309,6 +1308,7 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
 
             scope_snprintf(msg, sizeof(msg), "spaces in the path name %s representing a potential issue",
                            path);
+            fileSecurity(path, msg, FALSE, 0);
             notify(NOTIFY_FILES, msg);
         }
     }
@@ -1327,6 +1327,7 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
 
         scope_snprintf(msg, sizeof(msg), "path name %s contains double extensions representing a potential issue",
                        path);
+        fileSecurity(path, msg, FALSE, 0);
         notify(NOTIFY_FILES, msg);
     }
 
@@ -1342,6 +1343,7 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
         scope_snprintf(msg, sizeof(msg),
                        "path name %s contains setuid or setgid bits set representing a potential issue",
                        path);
+        fileSecurity(path, msg, FALSE, 0);
         notify(NOTIFY_FILES, msg);
     }
 
@@ -1362,6 +1364,7 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
                 scope_snprintf(msg, sizeof(msg),
                                "a system dir %s with a g/a write permission setting which represents a potential issue",
                                path);
+                fileSecurity(path, msg, FALSE, 0);
                 notify(NOTIFY_FILES, msg);
                 break;
             }
@@ -1399,6 +1402,7 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
             scope_snprintf(msg, sizeof(msg),
                            "a file %s that is owned by an unknown user, UID %d, which represents a potential issue",
                            path, sbuf->st_uid);
+            fileSecurity(path, msg, FALSE, 0);
             notify(NOTIFY_FILES, msg);
         }
 
@@ -1408,6 +1412,7 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
             scope_snprintf(msg, sizeof(msg),
                            "a file %s that is owned by an unknown group, GID %d, which represents a potential issue",
                            path, sbuf->st_gid);
+            fileSecurity(path, msg, FALSE, 0);
             notify(NOTIFY_FILES, msg);
         }
     }
@@ -1437,9 +1442,11 @@ doExfil(struct net_info_t *nettx, struct fs_info_t *fsrd)
     char msg[PATH_MAX + 256];
     if (rip[0] != '\0') {
         scope_snprintf(msg, sizeof(msg), "The file %s has been exfiltrated to %s", fsrd->path, rip);
+        fileSecurity(fsrd->path, msg, FALSE, 0);
         notify(NOTIFY_FILES, msg);
     } else {
         scope_snprintf(msg, sizeof(msg), "The file %s has been exfiltrated", fsrd->path);
+        fileSecurity(fsrd->path, msg, FALSE, 0);
         notify(NOTIFY_FILES, msg);
     }
 }
@@ -1984,23 +1991,27 @@ getDNSName(int sd, void *pkt, int pktlen)
 
         int label_len = (int)*dname++;
         if (label_len > 63) {
+            dnsSecurity(dname, "DNS request with an illegal label length");
             notify(NOTIFY_DNS, "DNS request with an illegal label length");
             return -1; // labels must be 63 chars or less
         }
 
         if (&dname[label_len] >= pkt_end) {
+            dnsSecurity(dname, "DNS request with a label length that exceeds the packet end");
             notify(NOTIFY_DNS, "DNS request with a label length that exceeds the packet end");
             return -1; // honor packet end
         }
 
         // Ensure we don't overrun the size of dnsName
         if ((dnsNameBytesUsed + label_len) >= sizeof(dnsName)) {
+            dnsSecurity(dname, "DNS request with a name that is greater than the size of a label");
             notify(NOTIFY_DNS, "DNS request with a name that is greater than the size of a label");
             return -1;
         }
 
         for ( ; (label_len > 0); label_len--) {
             if (!isLegalLabelChar(*dname)) {
+                dnsSecurity(dname, "DNS request with an illegal label character");
                 notify(NOTIFY_DNS, "DNS request with an illegal label character");
                 return -1;
             }
@@ -2048,6 +2059,7 @@ parseDNSAnswer(char *buf, size_t len, cJSON *json, cJSON *addrs, int first)
 
             if (scope_ns_parserr(&handle, ns_s_an, i, &rr) == -1) {
                 scopeLogError("ERROR:parse rr");
+                dnsSecurity("nil", "illegal DNS response can't be parsed");
                 notify(NOTIFY_DNS, "illegal DNS response can't be parsed");
                 return FALSE;
             }
@@ -2067,17 +2079,20 @@ parseDNSAnswer(char *buf, size_t len, cJSON *json, cJSON *addrs, int first)
             if (ns_rr_type(rr) == ns_t_a) {
                 if (!scope_inet_ntop(AF_INET, (struct sockaddr_in *)rr.rdata,
                                      ipaddr, sizeof(ipaddr))) {
+                    dnsSecurity("nil", "DNS response with an illegal IPv6 address");
                     notify(NOTIFY_DNS, "DNS response with an illegal IPv6 address");
                     continue;
                 }
             } else if (ns_rr_type(rr) == ns_t_aaaa) {
                 if (!scope_inet_ntop(AF_INET6, (struct sockaddr_in6 *)rr.rdata,
                                      ipaddr, sizeof(ipaddr))) {
+                    dnsSecurity("nil", "DNS response with an illegal IPv4 address");
                     notify(NOTIFY_DNS, "DNS response with an illegal IPv4 address");
                     continue;
                 }
             } else {
                 DBG("DNS response received without an IP address");
+                dnsSecurity("nil", "DNS response received without an IP address");
                 notify(NOTIFY_DNS, "DNS response without an IP address");
                 continue;
             }
@@ -2341,6 +2356,7 @@ doRead(int fd, uint64_t initialTime, int success, const void *buf, ssize_t bytes
                 char msg[PATH_MAX + 128];
 
                 scope_snprintf(msg, sizeof(msg), "accessing a file from the no access list: %s", fs->path);
+                fileSecurity(fs->path, msg, FALSE, 0);
                 notify(NOTIFY_FILES, msg);
             }
 
@@ -2382,6 +2398,7 @@ doWrite(int fd, uint64_t initialTime, int success, const void *buf, ssize_t byte
                 char msg[PATH_MAX + 128];
 
                 scope_snprintf(msg, sizeof(msg), "a file modification to an executable file, a system file or a file from the no write list: %s", fs->path);
+                fileSecurity(fs->path, msg, FALSE, bytes);
                 notify(NOTIFY_FILES, msg);
 
             }
@@ -2777,4 +2794,55 @@ getNetRxTxBucket(net_info *net)
     }
 
     return bucket;
+}
+
+// Create a security event for a file
+void
+fileSecurity(const char* path, const char* reason, bool close, uint64_t write_bytes)
+{
+    size_t len = sizeof(security_info_t);
+    security_info_t *secp = scope_calloc(1, len);
+    if (!secp) return;
+
+    secp->evtype = EVT_SEC;
+    scope_strncpy(secp->path, path, scope_strnlen(path, sizeof(secp->path)));
+    scope_strncpy(secp->reason, reason, scope_strnlen(reason, sizeof(secp->reason)));
+
+    if (close) {
+        secp->write_bytes = write_bytes;
+    }
+
+    cmdPostEvent(g_ctl, (char *)secp);
+}
+
+// Create a security event when a function is GOT hooked
+void
+gotSecurity(const char* funcname, const char* reason, const char* dlpi_name, const char* file_from_maps_file)
+{
+    size_t len = sizeof(security_info_t);
+    security_info_t *secp = scope_calloc(1, len);
+    if (!secp) return;
+
+    secp->evtype = EVT_SEC;
+    scope_strncpy(secp->func, funcname, scope_strnlen(funcname, sizeof(secp->func)));
+    scope_strncpy(secp->reason, reason, scope_strnlen(reason, sizeof(secp->reason)));
+    scope_strncpy(secp->dlpi_name, dlpi_name, scope_strnlen(dlpi_name, sizeof(secp->dlpi_name)));
+    scope_strncpy(secp->path, file_from_maps_file, scope_strnlen(file_from_maps_file, sizeof(secp->path)));
+
+    cmdPostEvent(g_ctl, (char *)secp);
+}
+
+// Create a security event for DNS
+void
+dnsSecurity(const char* dnsName, const char* reason)
+{
+    size_t len = sizeof(security_info_t);
+    security_info_t *secp = scope_calloc(1, len);
+    if (!secp) return;
+
+    secp->evtype = EVT_SEC;
+    scope_strncpy(secp->dnsName, dnsName, scope_strnlen(dnsName, sizeof(secp->dnsName)));
+    scope_strncpy(secp->reason, reason, scope_strnlen(reason, sizeof(secp->reason)));
+
+    cmdPostEvent(g_ctl, (char *)secp);
 }

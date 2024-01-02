@@ -51,6 +51,7 @@ var (
 		"http":    nc(color.FgHiBlue),
 		"fs":      nc(color.FgHiCyan),
 		"net":     nc(color.FgHiRed),
+		"sec":     nc(color.FgHiRed),
 		"default": nc(color.FgYellow),
 	}
 )
