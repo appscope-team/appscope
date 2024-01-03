@@ -97,6 +97,7 @@ fi
 run_test test/${OS}/httpmatchtest
 run_test test/${OS}/httpaggtest
 run_test test/${OS}/selfinterposetest
+run_test test/${OS}/detecttest
 
 # Loader tests
 echo "Running Loader Tests"
@@ -105,6 +106,7 @@ run_test test/${OS}/libdirtest
 run_test test/${OS}/setuptest
 run_test test/${OS}/nsinfotest
 
+export SCOPE_NOTIFY=FALSE
 
 if [ "${OS}" = "linux" ]; then
     SAVEVARS=$ENVARS

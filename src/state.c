@@ -1278,16 +1278,25 @@ detectProtocol(int sockfd, net_info *net, void *buf, size_t len, metric_t src, s
 }
 
 static void
-doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
+doDetectFile(const char *path, fs_info *fs)
 {
-    if ((g_notify_def.enable == FALSE) || (g_notify_def.files == FALSE) ||
-        !fs || !path) return;
+    if ((g_notify_def.enable == FALSE) ||
+        (g_notify_def.files == FALSE) ||
+        !fs || !path ||
+        scope_strstr(path, "stdin") ||
+        scope_strstr(path, "stdout") ||
+        scope_strstr(path, "stderr")) return;
 
     int i;
+    char *this;
 
     // Should this path be enforced for write access?
     for (i = 0; g_notify_def.file_write[i] != NULL; i++) {
-        if (scope_strstr(path, g_notify_def.file_write[i])) {
+        // ignore a leading space
+        this = g_notify_def.file_write[i];
+        if (*this == ' ') this++;
+
+        if (scope_strstr(path, this)) {
             fs->enforceWR = TRUE;
             break;
         }
@@ -1296,22 +1305,29 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
     // TODO: do we need to check both?
     // Should this path be enforced for read access?
     for (i = 0; g_notify_def.file_read[i] != NULL; i++) {
-        if (scope_strstr(path, g_notify_def.file_read[i])) {
+        // ignore a leading space
+        this = g_notify_def.file_read[i];
+        if (*this == ' ') this++;
+
+        if (scope_strstr(path, this)) {
             fs->enforceRD = TRUE;
             break;
         }
     }
 
     // check for spaces at the end of file names
-    for (i = 0; i < scope_strlen(path); i++) {
+    i = scope_strlen(path);
+    do {
         if (scope_isspace(path[i])) {
             char msg[PATH_MAX + 128];
 
-            scope_snprintf(msg, sizeof(msg), "spaces in the path name %s representing a potential issue",
+            scope_snprintf(msg, sizeof(msg),
+                           "spaces at the end of the path name %s representing a potential issue",
                            path);
             notify(NOTIFY_FILES, msg);
         }
-    }
+        i--;
+    } while (isalnum(path[i]) == 0);
 
     // check for a double file extension
     int num_entries = 0;
@@ -1332,11 +1348,7 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
 
     // check for several file permission settings that could represent potential issues
     // check for files that have the setuid or setgid bits set
-    if (sbuf &&
-        (scope_strstr(path, "stdout") == NULL) &&
-        (scope_strstr(path, "stdin") == NULL) &&
-        (scope_strstr(path, "stderr") == NULL) &&
-        ((sbuf->st_mode & S_ISUID) || (sbuf->st_mode & S_ISGID))) {
+    if ((fs->mode & S_ISUID) || (fs->mode & S_ISGID)) {
         char msg[PATH_MAX + 128];
 
         scope_snprintf(msg, sizeof(msg),
@@ -1353,7 +1365,7 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
     }
 
     // files in system dirs that have g/a write perms
-    if ((sbuf->st_mode & S_IWGRP) || (sbuf->st_mode & S_IWOTH)) {
+    if ((fs->mode & S_IWGRP) || (fs->mode & S_IWOTH)) {
         // Is this path a system dir?
         for (i = 0; g_notify_def.sys_dirs[i] != NULL; i++) {
             if (scope_strstr(path, g_notify_def.sys_dirs[i])) {
@@ -1369,47 +1381,42 @@ doDetectFile(const char *path, fs_info *fs, struct stat *sbuf)
     }
 
     // files that are owned by unknown users; uid/gid and the list of known users
-    if ((scope_strstr(path, "stdout") == NULL) &&
-        (scope_strstr(path, "stdin") == NULL) &&
-        (scope_strstr(path, "stderr") == NULL)) {
+    struct passwd *pw;
+    bool known_uid = FALSE, known_gid = FALSE;
 
-        struct passwd *pw;
-        bool known_uid = FALSE, known_gid = FALSE;
+    // Open the password database
+    setpwent();
 
-        // Open the password database
-        setpwent();
-
-        // Iterate through known users
-        while ((pw = getpwent()) != NULL) {
-            if (sbuf->st_uid == pw->pw_uid) {
-                known_uid = TRUE;
-            }
-
-            if (sbuf->st_gid == pw->pw_gid) {
-                known_gid = TRUE;
-            }
+    // Iterate through known users
+    while ((pw = getpwent()) != NULL) {
+        if (fs->fuid == pw->pw_uid) {
+            known_uid = TRUE;
         }
 
-        // Close the password database
-        endpwent();
-
-        if (known_uid == FALSE) {
-            char msg[PATH_MAX + 128];
-
-            scope_snprintf(msg, sizeof(msg),
-                           "a file %s that is owned by an unknown user, UID %d, which represents a potential issue",
-                           path, sbuf->st_uid);
-            notify(NOTIFY_FILES, msg);
+        if (fs->fgid == pw->pw_gid) {
+            known_gid = TRUE;
         }
+    }
 
-        if (known_gid == FALSE) {
-            char msg[PATH_MAX + 128];
+    // Close the password database
+    endpwent();
 
-            scope_snprintf(msg, sizeof(msg),
-                           "a file %s that is owned by an unknown group, GID %d, which represents a potential issue",
-                           path, sbuf->st_gid);
-            notify(NOTIFY_FILES, msg);
-        }
+    if (known_uid == FALSE) {
+        char msg[PATH_MAX + 128];
+
+        scope_snprintf(msg, sizeof(msg),
+                       "a file %s that is owned by an unknown user, UID %d, which represents a potential issue",
+                       path, fs->fuid);
+        notify(NOTIFY_FILES, msg);
+    }
+
+    if (known_gid == FALSE) {
+        char msg[PATH_MAX + 128];
+
+        scope_snprintf(msg, sizeof(msg),
+                       "a file %s that is owned by an unknown group, GID %d, which represents a potential issue",
+                       path, fs->fgid);
+        notify(NOTIFY_FILES, msg);
     }
 }
 
@@ -1715,36 +1722,82 @@ addSock(int fd, int type, int family)
     }
 }
 
+/*
+ * Potentially block a network connection:
+ * 1) if the remote IP is in the white list, always allow
+ * 2) if the remote IP is in the black list, always block
+ * 3) if user config defines a port block and the port matches then block
+ *
+ * Requires the remote sockaddr from accept or connect
+ */
 int
-doBlockConnection(int fd, const struct sockaddr *addr_arg)
+doBlockConnection(int fd, const struct sockaddr *addr)
 {
-    in_port_t port;
+    if (!addr) return 0;
 
-    if (g_cfg.blockconn == DEFAULT_PORTBLOCK) return 0;
-
-    // We expect addr_arg to be supplied for connect() calls
-    // and expect it to be NULL for accept() calls.  When it's
-    // null, we will use addressing from the local side of the
-    // accept fd.
-    const struct sockaddr* addr;
-    if (addr_arg) {
-        addr = addr_arg;
-    } else if (getNetEntry(fd)) {
-        addr = (struct sockaddr*)&g_netinfo[fd].localConn;
-    } else {
-        return 0;
-    }
+    in_port_t port = 0;
+    char rip[INET6_ADDRSTRLEN];
+    rip[0] = '\0';
 
     if (addr->sa_family == AF_INET) {
         port = ((struct sockaddr_in *)addr)->sin_port;
+        scope_inet_ntop(AF_INET,
+                        &((struct sockaddr_in *)addr)->sin_addr,
+                        rip, sizeof(rip));
     } else if (addr->sa_family == AF_INET6) {
         port = ((struct sockaddr_in6 *)addr)->sin6_port;
-    } else {
-        return 0;
+        scope_inet_ntop(AF_INET6,
+                        &((struct sockaddr_in6 *)addr)->sin6_addr,
+                        rip, sizeof(rip));
     }
 
+    if (rip[0] != '\0') {
+        /*
+         * Two types of responses to a white list entry:
+         * 1) on a match the connection is allowed always
+         * 2) if blocking and there is not a match then don't allow the connection
+         */
+        for (int i = 0; g_notify_def.ip_white[i] != NULL; i++) {
+            // always return all good if there is a white match
+            if (scope_strcmp(rip, g_notify_def.ip_white[i]) == 0) return 0;
+        }
+
+        /*
+         * We get here if there was no match in the white list
+         * If blocking when there is not a match in the white list, then return no go
+         */
+        if (g_notify_def.white_block == TRUE) {
+            char msg[INET6_ADDRSTRLEN + 256];
+
+            scopeLogInfo("fd:%d doBlockConnection: blocked connection to %s:%d", fd, rip, port);
+            scope_snprintf(msg, sizeof(msg), "a blocked network connection to %s from a white list mismatch", rip);
+            notify(NOTIFY_NET, msg);
+            return 1;
+        }
+
+        // Should this connection be blocked based on the black list?
+        for (int i = 0; g_notify_def.ip_black[i] != NULL; i++) {
+            if (scope_strcmp(rip, g_notify_def.ip_black[i]) == 0) {
+                char msg[INET6_ADDRSTRLEN + 256];
+
+                scopeLogInfo("fd:%d doBlockConnection: blocked connection to %s:%d", fd, rip, port);
+                scope_snprintf(msg, sizeof(msg), "a blocked network connection to %s from the black list", rip);
+                notify(NOTIFY_NET, msg);
+                return 1;
+            }
+        }
+    }
+
+    // Is an explicit port being blocked per user config?
+    if (g_cfg.blockconn == DEFAULT_PORTBLOCK) return 0;
+
     if (g_cfg.blockconn == scope_ntohs(port)) {
-        scopeLogInfo("fd:%d doBlockConnection: blocked connection", fd);
+        char msg[INET6_ADDRSTRLEN + 256];
+
+        scopeLogInfo("fd:%d doBlockConnection: blocked connection to %s:%d", fd, rip, port);
+        scope_snprintf(msg, sizeof(msg), "a blocked network connection due to user config of a port block on %s:%d",
+                       rip, port);
+        notify(NOTIFY_NET, msg);
         return 1;
     }
 
@@ -2648,7 +2701,7 @@ doOpen(int fd, const char *path, fs_type_t type, const char *func)
         }
 
         doUpdateState(FS_OPEN, fd, 0, func, path);
-        doDetectFile(path, &g_fsinfo[fd], &sbuf);
+        doDetectFile(path, &g_fsinfo[fd]);
         scopeLog(CFG_LOG_TRACE, "fd:%d %s", fd, func);
     }
 }

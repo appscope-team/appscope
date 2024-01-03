@@ -158,6 +158,7 @@ libtestnofsan: $(LIBRARY_C_FILES) $(LIBRARY_TEST_C_FILES) $(YAML_AR) $(JSON_AR) 
 	$(CC) $(TEST_CFLAGS) -o test/$(OS)/coredumptest coredumptest.o coredump.o scopestdlib.o dbg.o utils.o fn.o plattime.o os.o scopeelf.o test.o $(TEST_AR) $(TEST_LD_FLAGS)
 	$(CC) $(TEST_CFLAGS) -o test/$(OS)/snapshottest snapshottest.o snapshot.o coredump.o scopestdlib.o dbg.o utils.o fn.o plattime.o os.o scopeelf.o test.o $(TEST_AR) $(TEST_LD_FLAGS)
 	$(CC) $(TEST_CFLAGS) -o test/$(OS)/dnstest dnstest.o scopestdlib.o dbg.o test.o $(TEST_AR) $(TEST_LD_FLAGS)
+	$(CC) $(TEST_CFLAGS) -o test/$(OS)/detecttest detect.o com.o ctl.o log.o transport.o backoff.o evtformat.o circbuf.o mtcformat.o strset.o cfgutils.o cfg.o mtc.o scopestdlib.o dbg.o linklist.o fn.o utils.o os.o test.o report.o evtutils.o strsearch.o httpagg.o httpmatch.o state.o httpstate.o metriccapture.o plattime.o scopeelf.o notify.o $(TEST_AR) $(TEST_LD_FLAGS)
 	@[ -z "$(CI)" ] || echo "::endgroup::"
 	@echo "$${CI:+::group::}Building Manual Tests"
 	$(CC) $(TEST_CFLAGS) test/manual/passfd.c -lpthread -o test/$(OS)/passfdtest
