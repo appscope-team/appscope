@@ -20,6 +20,7 @@
 #define NOTIFY_IQ_SYS_DIRS "SCOPE_NOTIFY_SYS_DIRS"
 #define NOTIFY_IQ_IP_WHITE "SCOPE_NOTIFY_IP_WHITE"
 #define NOTIFY_IQ_IP_BLACK "SCOPE_NOTIFY_IP_BLACK"
+#define NOTIFY_WHITE_BLOCK "SCOPE_WHITE_LIST_BLOCK"
 #define SLACK_CHANNEL "SCOPE_SLACKBOT_CHANNEL"
 
 // Constants
@@ -45,6 +46,7 @@
 #define DEFAULT_SYS_DIRS "/etc", "/lib", "/usr/lib", "/var/lib", "/lib/run", "/sbin", "/usr/bin", "/bin"
 #define DEFAULT_IP_WHITE NULL
 #define DEFAULT_IP_BLACK NULL
+#define DEFAULT_WHITE_BLOCK FALSE
 
 typedef enum {
     NOTIFY_INIT,
@@ -66,6 +68,7 @@ typedef struct {
     bool network;
     bool exfil;
     bool dns;
+    bool white_block;
     char *file_read[MAX_FILE_ENTRIES];
     char *file_write[MAX_FILE_ENTRIES];
     char *sys_dirs[MAX_FILE_ENTRIES];

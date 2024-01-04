@@ -1715,36 +1715,82 @@ addSock(int fd, int type, int family)
     }
 }
 
+/*
+ * Potentially block a network connection:
+ * 1) if the remote IP is in the white list, always allow
+ * 2) if the remote IP is in the black list, always block
+ * 3) if user config defines a port block and the port matches then block
+ *
+ * Requires the remote sockaddr from accept or connect
+ */
 int
-doBlockConnection(int fd, const struct sockaddr *addr_arg)
+doBlockConnection(int fd, const struct sockaddr *addr)
 {
-    in_port_t port;
+    if (!addr) return 0;
 
-    if (g_cfg.blockconn == DEFAULT_PORTBLOCK) return 0;
-
-    // We expect addr_arg to be supplied for connect() calls
-    // and expect it to be NULL for accept() calls.  When it's
-    // null, we will use addressing from the local side of the
-    // accept fd.
-    const struct sockaddr* addr;
-    if (addr_arg) {
-        addr = addr_arg;
-    } else if (getNetEntry(fd)) {
-        addr = (struct sockaddr*)&g_netinfo[fd].localConn;
-    } else {
-        return 0;
-    }
+    in_port_t port = 0;
+    char rip[INET6_ADDRSTRLEN];
+    rip[0] = '\0';
 
     if (addr->sa_family == AF_INET) {
         port = ((struct sockaddr_in *)addr)->sin_port;
+        scope_inet_ntop(AF_INET,
+                        &((struct sockaddr_in *)addr)->sin_addr,
+                        rip, sizeof(rip));
     } else if (addr->sa_family == AF_INET6) {
         port = ((struct sockaddr_in6 *)addr)->sin6_port;
-    } else {
-        return 0;
+        scope_inet_ntop(AF_INET6,
+                        &((struct sockaddr_in6 *)addr)->sin6_addr,
+                        rip, sizeof(rip));
     }
 
+    if (rip[0] != '\0') {
+        /*
+         * Two types of responses to a white list entry:
+         * 1) on a match the connection is allowed always
+         * 2) if blocking and there is not a match then don't allow the connection
+         */
+        for (int i = 0; g_notify_def.ip_white[i] != NULL; i++) {
+            // always return all good if there is a white match
+            if (scope_strcmp(rip, g_notify_def.ip_white[i]) == 0) return 0;
+        }
+
+        /*
+         * We get here if there was no match in the white list
+         * If blocking when there is not a match in the white list, then return no go
+         */
+        if (g_notify_def.white_block == TRUE) {
+            char msg[INET6_ADDRSTRLEN + 256];
+
+            scopeLogInfo("fd:%d doBlockConnection: blocked connection to %s:%d", fd, rip, port);
+            scope_snprintf(msg, sizeof(msg), "a blocked network connection to %s from a white list mismatch", rip);
+            notify(NOTIFY_NET, msg);
+            return 1;
+        }
+
+        // Should this connection be blocked based on the black list?
+        for (int i = 0; g_notify_def.ip_black[i] != NULL; i++) {
+            if (scope_strcmp(rip, g_notify_def.ip_black[i]) == 0) {
+                char msg[INET6_ADDRSTRLEN + 256];
+
+                scopeLogInfo("fd:%d doBlockConnection: blocked connection to %s:%d", fd, rip, port);
+                scope_snprintf(msg, sizeof(msg), "a blocked network connection to %s from the black list", rip);
+                notify(NOTIFY_NET, msg);
+                return 1;
+            }
+        }
+    }
+
+    // Is an explicit port being blocked per user config?
+    if (g_cfg.blockconn == DEFAULT_PORTBLOCK) return 0;
+
     if (g_cfg.blockconn == scope_ntohs(port)) {
-        scopeLogInfo("fd:%d doBlockConnection: blocked connection", fd);
+        char msg[INET6_ADDRSTRLEN + 256];
+
+        scopeLogInfo("fd:%d doBlockConnection: blocked connection to %s:%d", fd, rip, port);
+        scope_snprintf(msg, sizeof(msg), "a blocked network connection due to user config of a port block on %s:%d",
+                       rip, port);
+        notify(NOTIFY_NET, msg);
         return 1;
     }
 

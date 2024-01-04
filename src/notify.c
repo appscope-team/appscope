@@ -117,6 +117,10 @@ getNotifyVars(void)
         g_notify_def.dns = DEFAULT_DNS;
     }
 
+    if ((g_notify_def.white_block = setVar(NOTIFY_WHITE_BLOCK)) == -1) {
+        g_notify_def.white_block = DEFAULT_WHITE_BLOCK;
+    }
+
     // Get file read and write lists
     // Tokenize the environment variable value, assumes ',' is the delimeter
     if ((enval = getenv(NOTIFY_IQ_FILE_READ))) {
